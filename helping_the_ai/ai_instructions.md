@@ -6,6 +6,7 @@ This is intended to be a web application that stores images of pages from person
 2. A Page has an associated image and textual information: the text extracted from the image, as well as metadata such as the date it was written, notes about it.
    a. Source ought to implement frontend and backend for uploading either one or many pages.
    b. In blob storage, the path to a given Page should be Source/Page.
+3. There are to be 2 different ways of interacting with the content - search, which should look for string match in Cosmos DB content, and chat, which will implement RAG, details to come later.
 
 Here are some technical details:
 
@@ -24,10 +25,10 @@ Here are some technical details:
 
 Design notes:
 
-1.  Prefer dark theme, clean Material Design. Probably a good idea to use Material UI
+1.  Prefer dark theme, clean Material Design. Probably a good idea to use Material UI.
 
 ## General Instructions:
 
-1.  At the end of every action sequence, write a log entry with the current time and date to a file in helping_the_ai\ai-logs. There should be one file per day. If the file does not exist for today, create it, and start with a summary of the previous several files as needed. The log entries should briefly but completely summarize the work that was done and the functionality that was accomplished.
-2.  At the start of every action sequence, read the ai_log file for this day to understand what is going on and what was done so far.
-3.  In the root of the project there is folder called helping_the_ai. This contains useful context aids. In no case should the contents of that folder be modified.
+1.  At the end of every action sequence, write a log entry to a file in helping_the_ai\ai-logs with a file name that reflects the current time, date and a few word summary of the changes. There should be a separate file for every change. The log entries should briefly but completely summarize the work that was done and the functionality that was accomplished.
+2.  At the start of every action sequence, read the relevant recent ai_log files for this day to understand what is going on and what was done so far.
+3.  In the root of the project there is folder called helping_the_ai. This contains useful context aids. In no case should the contents of that folder be modified. Content in helping_the_ai is to be used as reference only, nothing should be imported directly from this folder.

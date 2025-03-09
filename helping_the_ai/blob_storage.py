@@ -18,8 +18,10 @@ class BlobStorageClient:
 
         # Get environment variables
         self.storage_account_name = os.environ.get("STORAGE_ACCOUNT_NAME")
+        self.container_name = os.environ.get("STORAGE_CONTAINER_NAME")
 
         logger.info("Storage account name: %s", self.storage_account_name)
+        logger.info("Storage container name: %s", self.container_name)
 
         # Validate environment variables
         if not self.storage_account_name:
@@ -27,6 +29,12 @@ class BlobStorageClient:
                 "Missing required environment variable: STORAGE_ACCOUNT_NAME")
             raise ValueError(
                 "STORAGE_ACCOUNT_NAME environment variable must be set")
+        
+        if not self.container_name:
+            logger.error(
+                "Missing required environment variable: STORAGE_CONTAINER_NAME")
+            raise ValueError(
+                "STORAGE_CONTAINER_NAME environment variable must be set")
 
         try:
             # Create a credential using DefaultAzureCredential
@@ -53,27 +61,26 @@ class BlobStorageClient:
 
     def _ensure_container_exists(self):
         """Ensure that the required container exists."""
-        container_name = "spaces-files"
 
         try:
             # Check if container exists
-            logger.info("Checking if container exists: %s", container_name)
-            container_client = self.client.get_container_client(container_name)
+            logger.info("Checking if container exists: %s", self.container_name)
+            container_client = self.client.get_container_client(self.container_name)
             container_client.get_container_properties()
-            logger.info("Container '%s' already exists", container_name)
+            logger.info("Container '%s' already exists", self.container_name)
         except Exception as e:
             # Create container if it doesn't exist
             logger.info("Container '%s' not found. Creating it...",
-                        container_name)
+                        self.container_name)
             logger.debug("Error when checking for container: %s", str(e))
 
             try:
-                self.client.create_container(container_name)
+                self.client.create_container(self.container_name)
                 logger.info("Container '%s' created successfully",
-                            container_name)
+                            self.container_name)
             except Exception as create_error:
                 logger.error("Failed to create container '%s': %s",
-                             container_name, str(create_error), exc_info=True)
+                             self.container_name, str(create_error), exc_info=True)
                 raise
 
     async def upload_file(self, file: BinaryIO, file_name: str, content_type: str) -> Dict[str, Any]:
@@ -94,10 +101,9 @@ class BlobStorageClient:
             # Generate a unique blob name
             file_extension = os.path.splitext(file_name)[1]
             blob_name = f"{uuid.uuid4()}{file_extension}"
-            container_name = "spaces-files"
 
             # Get container client
-            container_client = self.client.get_container_client(container_name)
+            container_client = self.client.get_container_client(self.container_name)
 
             # Get blob client
             blob_client = container_client.get_blob_client(blob_name)
@@ -119,7 +125,7 @@ class BlobStorageClient:
                 "name": file_name,
                 "blob_name": blob_name,
                 "content_type": content_type,
-                "container": container_name
+                "container": self.container_name
             }
 
         except Exception as e:
@@ -136,10 +142,8 @@ class BlobStorageClient:
         logger.info("Deleting file: %s", blob_name)
 
         try:
-            container_name = "spaces-files"
-
             # Get container client
-            container_client = self.client.get_container_client(container_name)
+            container_client = self.client.get_container_client(self.container_name)
 
             # Get blob client
             blob_client = container_client.get_blob_client(blob_name)
