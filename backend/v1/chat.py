@@ -38,8 +38,14 @@ class ChatRequest(BaseModel):
     sources_limit: int = 5
     source_ids: Optional[List[str]] = None
 
+class UsageInfo(BaseModel):
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
 class ChatResponse(BaseModel):
     data: ChatMessage
+    usage: Optional[UsageInfo] = None
     success: bool = True
     message: Optional[str] = None
 
@@ -172,7 +178,7 @@ class ChatHelper:
             context = "".join(context_parts)
             
             # Truncate if too long (OpenAI has a token limit)
-            max_length = 14000  # Conservative limit for gpt-4o
+            max_length = 1400000  # Conservative limit for gpt-4o
             if len(context) > max_length:
                 logger.warning(f"Context too long ({len(context)} chars), truncating to {max_length} chars")
                 context = context[:max_length]
@@ -209,11 +215,18 @@ If you don't know the answer or can't find relevant information in the archive, 
                 max_tokens=1000
             )
             
-            # Extract the response text
+            # Extract the response text and usage information
             response_text = response.choices[0].message.content
+            usage_info = None
+            if hasattr(response, 'usage'):
+                usage_info = UsageInfo(
+                    prompt_tokens=response.usage.prompt_tokens,
+                    completion_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens
+                )
             logger.info(f"Successfully generated response (length: {len(response_text)})")
             
-            return response_text
+            return response_text, usage_info
         
         except Exception as e:
             logger.error(f"Error generating response: {str(e)}", exc_info=True)
@@ -259,15 +272,16 @@ async def chat(request: ChatRequest = Body(...)):
             logger.info(f"Retrieved context for RAG (length: {len(context)}, citations: {len(citations)}, limit: {request.sources_limit}{source_info})")
         
         # Generate response
-        response_text = await helper.generate_response(request.message, context)
+        response_text, usage_info = await helper.generate_response(request.message, context)
         
-        # Return the response with citations
+        # Return the response with citations and usage information
         return ChatResponse(
             data=ChatMessage(
                 role="assistant", 
                 content=response_text,
                 citations=citations if citations else None
-            )
+            ),
+            usage=usage_info
         )
     
     except Exception as e:

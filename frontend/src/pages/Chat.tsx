@@ -30,8 +30,57 @@ import {
   Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { chatApi } from "../services/api";
-import { Citation } from "../types";
+import { Citation, UsageInfo } from "../types";
 import SourceSelector from "../components/SourceSelector";
+
+// Usage Info component
+const UsageInfoDisplay: React.FC<{ usage: UsageInfo }> = ({ usage }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const handleToggle = () => {
+    setExpanded(!expanded);
+  };
+
+  return (
+    <Box sx={{ mt: 1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          cursor: "pointer",
+          color: "text.secondary",
+        }}
+        onClick={handleToggle}
+      >
+        <InfoIcon fontSize="small" sx={{ mr: 0.5 }} />
+        <Typography variant="caption">
+          {expanded ? "Hide usage info" : "Show usage info"}
+        </Typography>
+        {expanded ? (
+          <ExpandLessIcon fontSize="small" />
+        ) : (
+          <ExpandMoreIcon fontSize="small" />
+        )}
+      </Box>
+
+      <Collapse in={expanded}>
+        <Box
+          sx={{ mt: 1, pl: 2, borderLeft: "1px solid", borderColor: "divider" }}
+        >
+          <Typography variant="caption" component="div">
+            Prompt tokens: {usage.prompt_tokens}
+          </Typography>
+          <Typography variant="caption" component="div">
+            Completion tokens: {usage.completion_tokens}
+          </Typography>
+          <Typography variant="caption" component="div">
+            Total tokens: {usage.total_tokens}
+          </Typography>
+        </Box>
+      </Collapse>
+    </Box>
+  );
+};
 
 // Citation list component
 const CitationList: React.FC<{ citations: Citation[] }> = ({ citations }) => {
@@ -91,6 +140,7 @@ const Chat: React.FC = () => {
       role: "user" | "assistant";
       content: string;
       citations?: Citation[];
+      usage?: UsageInfo;
     }>
   >([
     {
@@ -174,6 +224,7 @@ const Chat: React.FC = () => {
         role: response.data.role,
         content: response.data.content,
         citations: response.data.citations,
+        usage: response.usage,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -249,6 +300,10 @@ const Chat: React.FC = () => {
                 <MenuItem value={15}>15</MenuItem>
                 <MenuItem value={20}>20</MenuItem>
                 <MenuItem value={50}>50</MenuItem>
+                <MenuItem value={100}>100</MenuItem>
+                <MenuItem value={200}>200</MenuItem>
+                <MenuItem value={400}>400</MenuItem>
+                <MenuItem value={1000}>1000</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -322,6 +377,11 @@ const Chat: React.FC = () => {
                       message.citations.length > 0 && (
                         <CitationList citations={message.citations} />
                       )}
+
+                    {/* Show usage info if available */}
+                    {message.role === "assistant" && message.usage && (
+                      <UsageInfoDisplay usage={message.usage} />
+                    )}
                   </Box>
                 </ListItem>
                 {index < messages.length - 1 && (

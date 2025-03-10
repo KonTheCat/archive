@@ -1,6 +1,7 @@
 // API Response Types
 export interface ApiResponse<T> {
   data: T;
+  usage?: UsageInfo;
   success: boolean;
   message?: string;
 }
@@ -33,6 +34,12 @@ export interface Citation {
   page_title?: string;
   text_snippet: string;
   similarity: number;
+}
+
+export interface UsageInfo {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
 }
 
 export interface ChatMessage {

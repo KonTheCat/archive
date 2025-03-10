@@ -45,10 +45,26 @@ const SourceSelector: React.FC<SourceSelectorProps> = ({
       setLoading(true);
       const response = await sourcesApi.getSources();
       if (response.success) {
-        setSources(response.data);
+        // Sort sources by start date (sources without start date go to the end)
+        const sortedSources = [...response.data].sort((a, b) => {
+          // If both sources have start dates, compare them
+          if (a.startDate && b.startDate) {
+            return (
+              new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+            );
+          }
+          // If only a has a start date, it comes first
+          if (a.startDate) return -1;
+          // If only b has a start date, it comes first
+          if (b.startDate) return 1;
+          // If neither has a start date, maintain original order
+          return 0;
+        });
+
+        setSources(sortedSources);
         // If no sources are selected yet, select all by default
         if (selectedSourceIds.length === 0) {
-          onSourceSelectionChange(response.data.map((source) => source.id));
+          onSourceSelectionChange(sortedSources.map((source) => source.id));
         }
       } else {
         setError(response.message || "Failed to fetch sources");
