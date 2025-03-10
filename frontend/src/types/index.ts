@@ -14,6 +14,27 @@ export interface PaginatedResponse<T> {
   message?: string;
 }
 
+// Chat Types
+export interface Citation {
+  source_id: string;
+  source_name: string;
+  page_id: string;
+  page_title?: string;
+  text_snippet: string;
+  similarity: number;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  citations?: Citation[];
+}
+
+export interface ChatRequest {
+  message: string;
+  vector_search?: boolean;
+}
+
 // Source Types
 export interface Source {
   id: string;

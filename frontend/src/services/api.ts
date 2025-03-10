@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ApiResponse, Source, Page } from "../types/index";
+import { ApiResponse, Source, Page, ChatMessage } from "../types/index";
 
 // Create axios instance with base URL and default headers
 const api = axios.create({
@@ -141,6 +141,21 @@ export const searchApi = {
     const response = await api.get<
       ApiResponse<{ sources: Source[]; pages: Page[] }>
     >(`/search?q=${encodeURIComponent(query)}&limit=${limit}&vector=${vector}`);
+    return response.data;
+  },
+};
+
+// Chat API
+export const chatApi = {
+  // Send a message to the chat API
+  sendMessage: async (
+    message: string,
+    vectorSearch: boolean = true
+  ): Promise<ApiResponse<ChatMessage>> => {
+    const response = await api.post<ApiResponse<ChatMessage>>("/chat", {
+      message,
+      vector_search: vectorSearch,
+    });
     return response.data;
   },
 };

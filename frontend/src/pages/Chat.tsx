@@ -8,12 +8,10 @@ import {
   Paper,
   List,
   ListItem,
-  ListItemText,
   CircularProgress,
   Divider,
   IconButton,
-  Menu,
-  MenuItem,
+  Collapse,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -22,13 +20,64 @@ import {
 } from "@mui/material";
 import {
   Send as SendIcon,
-  MoreVert as MoreVertIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Info as InfoIcon,
   Delete as DeleteIcon,
-  Save as SaveIcon,
 } from "@mui/icons-material";
+import { chatApi } from "../services/api";
+import { Citation } from "../types";
 
-// Note: This is a placeholder for the RAG chat functionality
-// The actual implementation would require backend API endpoints for chat
+// Citation list component
+const CitationList: React.FC<{ citations: Citation[] }> = ({ citations }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const handleToggle = () => {
+    setExpanded(!expanded);
+  };
+
+  return (
+    <Box sx={{ mt: 1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          cursor: "pointer",
+          color: "text.secondary",
+        }}
+        onClick={handleToggle}
+      >
+        <InfoIcon fontSize="small" sx={{ mr: 0.5 }} />
+        <Typography variant="caption">
+          {expanded ? "Hide sources" : "Show sources"} ({citations.length})
+        </Typography>
+        {expanded ? (
+          <ExpandLessIcon fontSize="small" />
+        ) : (
+          <ExpandMoreIcon fontSize="small" />
+        )}
+      </Box>
+
+      <Collapse in={expanded}>
+        <Box
+          sx={{ mt: 1, pl: 2, borderLeft: "1px solid", borderColor: "divider" }}
+        >
+          {citations.map((citation, index) => (
+            <Box key={index} sx={{ mb: 1 }}>
+              <Typography variant="caption" sx={{ fontWeight: "bold" }}>
+                {citation.source_name}{" "}
+                {citation.page_title && `- ${citation.page_title}`}
+              </Typography>
+              <Typography variant="caption" component="div" sx={{ mt: 0.5 }}>
+                {citation.text_snippet}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+};
 
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<
@@ -36,7 +85,7 @@ const Chat: React.FC = () => {
       id: string;
       role: "user" | "assistant";
       content: string;
-      timestamp: Date;
+      citations?: Citation[];
     }>
   >([
     {
@@ -44,12 +93,10 @@ const Chat: React.FC = () => {
       role: "assistant",
       content:
         "Welcome to the Archive Chat! I can help you find information in your personal archive. What would you like to know?",
-      timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [openClearDialog, setOpenClearDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -60,6 +107,27 @@ const Chat: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
+  };
+
+  // Handle clearing the chat
+  const handleClearChat = () => {
+    setOpenClearDialog(true);
+  };
+
+  const handleConfirmClear = () => {
+    setMessages([
+      {
+        id: "welcome",
+        role: "assistant",
+        content:
+          "Chat history cleared. How can I help you with your archive today?",
+      },
+    ]);
+    setOpenClearDialog(false);
+  };
+
+  const handleCancelClear = () => {
+    setOpenClearDialog(false);
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -73,27 +141,41 @@ const Chat: React.FC = () => {
       id: Date.now().toString(),
       role: "user" as const,
       content: input,
-      timestamp: new Date(),
     };
 
+    // Add user message to the UI
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
-    // Simulate API call delay
-    setTimeout(() => {
-      // This is where you would call your backend API for RAG
-      // For now, we'll just simulate a response
+    try {
+      // Call the chat API - always use RAG (vector search)
+      const response = await chatApi.sendMessage(input, true);
+
+      // Add assistant response to the UI
       const assistantMessage = {
         id: (Date.now() + 1).toString(),
-        role: "assistant" as const,
-        content: `This is a simulated response to your query: "${input}". In a real implementation, this would use RAG to search through your archive and provide relevant information.`,
-        timestamp: new Date(),
+        role: response.data.role,
+        content: response.data.content,
+        citations: response.data.citations,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+
+      // Add error message
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant" as const,
+        content:
+          "Sorry, there was an error processing your request. Please try again.",
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -101,45 +183,6 @@ const Chat: React.FC = () => {
       e.preventDefault();
       handleSendMessage();
     }
-  };
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleClearChat = () => {
-    setOpenClearDialog(true);
-    handleMenuClose();
-  };
-
-  const handleConfirmClear = () => {
-    setMessages([
-      {
-        id: "welcome",
-        role: "assistant",
-        content:
-          "Chat history cleared. How can I help you with your archive today?",
-        timestamp: new Date(),
-      },
-    ]);
-    setOpenClearDialog(false);
-  };
-
-  const handleCancelClear = () => {
-    setOpenClearDialog(false);
-  };
-
-  const handleSaveChat = () => {
-    // This would save the chat to the backend in a real implementation
-    // For now, we'll just show an alert
-    alert(
-      "Chat saved! (This is a placeholder - actual implementation would save to backend)"
-    );
-    handleMenuClose();
   };
 
   return (
@@ -157,29 +200,13 @@ const Chat: React.FC = () => {
             Archive Chat
           </Typography>
           <IconButton
-            aria-label="chat options"
-            aria-controls="chat-menu"
-            aria-haspopup="true"
-            onClick={handleMenuClick}
+            aria-label="clear chat"
+            onClick={handleClearChat}
+            color="default"
+            size="large"
           >
-            <MoreVertIcon />
+            <DeleteIcon />
           </IconButton>
-          <Menu
-            id="chat-menu"
-            anchorEl={anchorEl}
-            keepMounted
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem onClick={handleSaveChat}>
-              <SaveIcon fontSize="small" sx={{ mr: 1 }} />
-              Save Chat
-            </MenuItem>
-            <MenuItem onClick={handleClearChat}>
-              <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
-              Clear Chat
-            </MenuItem>
-          </Menu>
         </Box>
 
         <Typography variant="body1" color="text.secondary" paragraph>
@@ -205,20 +232,7 @@ const Chat: React.FC = () => {
                       message.role === "user" ? "row-reverse" : "row",
                   }}
                 >
-                  <ListItemText
-                    primary={message.role === "user" ? "You" : "Assistant"}
-                    secondary={
-                      <Typography
-                        component="span"
-                        variant="body1"
-                        sx={{
-                          display: "inline",
-                          whiteSpace: "pre-wrap",
-                        }}
-                      >
-                        {message.content}
-                      </Typography>
-                    }
+                  <Box
                     sx={{
                       backgroundColor:
                         message.role === "user"
@@ -228,20 +242,40 @@ const Chat: React.FC = () => {
                       p: 2,
                       maxWidth: "80%",
                     }}
-                    primaryTypographyProps={{
-                      fontSize: 12,
-                      color:
-                        message.role === "user"
-                          ? "primary.contrastText"
-                          : "text.secondary",
-                    }}
-                    secondaryTypographyProps={{
-                      color:
-                        message.role === "user"
-                          ? "primary.contrastText"
-                          : "text.primary",
-                    }}
-                  />
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color:
+                          message.role === "user"
+                            ? "primary.contrastText"
+                            : "text.secondary",
+                        display: "block",
+                        mb: 0.5,
+                      }}
+                    >
+                      {message.role === "user" ? "You" : "Assistant"}
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        color:
+                          message.role === "user"
+                            ? "primary.contrastText"
+                            : "text.primary",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {message.content}
+                    </Typography>
+
+                    {/* Show citations if available */}
+                    {message.role === "assistant" &&
+                      message.citations &&
+                      message.citations.length > 0 && (
+                        <CitationList citations={message.citations} />
+                      )}
+                  </Box>
                 </ListItem>
                 {index < messages.length - 1 && (
                   <Divider
