@@ -35,6 +35,8 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     vector_search: bool = True
+    sources_limit: int = 5
+    source_ids: Optional[List[str]] = None
 
 class ChatResponse(BaseModel):
     data: ChatMessage
@@ -94,9 +96,14 @@ class ChatHelper:
             logger.error(f"Error initializing ChatHelper: {str(e)}", exc_info=True)
             raise
     
-    async def get_relevant_context(self, query: str, limit: int = 5) -> Tuple[str, List[Citation]]:
+    async def get_relevant_context(self, query: str, limit: int = 5, source_ids: Optional[List[str]] = None) -> Tuple[str, List[Citation]]:
         """Get relevant context from the archive based on the query.
         
+        Args:
+            query (str): The user's query
+            limit (int, optional): Maximum number of results to return. Defaults to 5.
+            source_ids (Optional[List[str]], optional): List of source IDs to filter by. Defaults to None.
+            
         Returns:
             Tuple[str, List[Citation]]: A tuple containing the context string and a list of citations
         """
@@ -114,8 +121,14 @@ class ChatHelper:
                    VectorDistance(c.contentVector, @queryVector) AS similarity
             FROM c
             WHERE c.contentVector != null AND ARRAY_LENGTH(c.contentVector) > 0
-            ORDER BY VectorDistance(c.contentVector, @queryVector)
             """
+            
+            # Add source filter if source_ids is provided
+            if source_ids and len(source_ids) > 0:
+                source_ids_str = ", ".join([f"'{s}'" for s in source_ids])
+                vector_query += f" AND c.sourceId IN ({source_ids_str})"
+                
+            vector_query += " ORDER BY VectorDistance(c.contentVector, @queryVector)"
             
             # Execute the query
             vector_params = [{"name": "@queryVector", "value": query_vector}]
@@ -237,8 +250,13 @@ async def chat(request: ChatRequest = Body(...)):
         context = ""
         citations = []
         if request.vector_search:
-            context, citations = await helper.get_relevant_context(request.message)
-            logger.info(f"Retrieved context for RAG (length: {len(context)}, citations: {len(citations)})")
+            context, citations = await helper.get_relevant_context(
+                request.message, 
+                request.sources_limit,
+                request.source_ids
+            )
+            source_info = f", sources: {len(request.source_ids) if request.source_ids else 'all'}"
+            logger.info(f"Retrieved context for RAG (length: {len(context)}, citations: {len(citations)}, limit: {request.sources_limit}{source_info})")
         
         # Generate response
         response_text = await helper.generate_response(request.message, context)

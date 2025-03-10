@@ -24,6 +24,7 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 import { searchApi } from "../services/api";
 import { Source, Page } from "../types/index";
+import SourceSelector from "../components/SourceSelector";
 
 // Extended Page interface to include similarity score
 interface PageWithSimilarity extends Page {
@@ -41,6 +42,7 @@ const Search: React.FC = () => {
   // Default to showing only pages (tab index 2)
   const [useVectorSearch, setUseVectorSearch] = useState(false);
   const [resultLimit, setResultLimit] = useState<number>(10);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -61,7 +63,8 @@ const Search: React.FC = () => {
       const response = await searchApi.search(
         searchQuery,
         resultLimit,
-        useVectorSearch
+        useVectorSearch,
+        selectedSourceIds
       );
 
       if (response.success) {
@@ -260,6 +263,12 @@ const Search: React.FC = () => {
                 </FormControl>
               </Box>
             </Box>
+
+            {/* Source Selector */}
+            <SourceSelector
+              selectedSourceIds={selectedSourceIds}
+              onSourceSelectionChange={setSelectedSourceIds}
+            />
           </Box>
         </Paper>
 

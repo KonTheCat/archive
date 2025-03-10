@@ -75,7 +75,12 @@ const SourceDetail: React.FC = () => {
     severity: "success" as "success" | "error",
   });
   const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [editSource, setEditSource] = useState({ name: "", description: "" });
+  const [editSource, setEditSource] = useState({
+    name: "",
+    description: "",
+    startDate: "",
+    endDate: "",
+  });
   const [uploadLoading, setUploadLoading] = useState(false);
 
   useEffect(() => {
@@ -96,6 +101,8 @@ const SourceDetail: React.FC = () => {
         setEditSource({
           name: sourceResponse.data.name,
           description: sourceResponse.data.description || "",
+          startDate: sourceResponse.data.startDate || "",
+          endDate: sourceResponse.data.endDate || "",
         });
       } else {
         setError(
@@ -126,6 +133,8 @@ const SourceDetail: React.FC = () => {
       setEditSource({
         name: source.name,
         description: source.description || "",
+        startDate: source.startDate || "",
+        endDate: source.endDate || "",
       });
     }
   };
@@ -151,6 +160,8 @@ const SourceDetail: React.FC = () => {
       const response = await sourcesApi.updateSource(id, {
         name: editSource.name,
         description: editSource.description,
+        startDate: editSource.startDate || undefined,
+        endDate: editSource.endDate || undefined,
       });
 
       if (response.success) {
@@ -285,9 +296,10 @@ const SourceDetail: React.FC = () => {
       const files = Array.from(e.target.files);
       const formData = new FormData();
 
-      files.forEach((file, index) => {
-        formData.append(`files[${index}]`, file);
-        formData.append(`fileNames[${index}]`, file.name);
+      // Append each file with the same field name 'files'
+      // This matches the FastAPI expectation for List[UploadFile]
+      files.forEach((file) => {
+        formData.append("files", file);
       });
 
       const response = await pagesApi.uploadPages(id, formData);
@@ -424,6 +436,16 @@ const SourceDetail: React.FC = () => {
               {source.description && (
                 <Typography variant="body1" color="text.secondary" paragraph>
                   {source.description}
+                </Typography>
+              )}
+              {source.startDate && (
+                <Typography variant="body2" color="text.secondary">
+                  Start Date: {new Date(source.startDate).toLocaleDateString()}
+                </Typography>
+              )}
+              {source.endDate && (
+                <Typography variant="body2" color="text.secondary">
+                  End Date: {new Date(source.endDate).toLocaleDateString()}
                 </Typography>
               )}
               <Typography variant="body2" color="text.secondary">
@@ -652,6 +674,34 @@ const SourceDetail: React.FC = () => {
             onChange={handleInputChange}
             multiline
             rows={3}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            name="startDate"
+            label="Start Date (Optional)"
+            type="date"
+            fullWidth
+            variant="outlined"
+            value={editSource.startDate}
+            onChange={handleInputChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            name="endDate"
+            label="End Date (Optional)"
+            type="date"
+            fullWidth
+            variant="outlined"
+            value={editSource.endDate}
+            onChange={handleInputChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
           />
         </DialogContent>
         <DialogActions>

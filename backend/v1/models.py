@@ -1,11 +1,33 @@
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
+# Background Task Models
+class BackgroundTask(BaseModel):
+    id: str
+    taskType: str  # e.g., "text_extraction"
+    status: str  # "pending", "in_progress", "completed", "failed", "cancelled"
+    sourceId: Optional[str] = None
+    pageId: Optional[str] = None
+    scheduledAt: str  # When the task was created
+    canCancel: bool  # Whether this task type can be cancelled
+
+class BackgroundTaskResponse(BaseModel):
+    data: BackgroundTask
+    success: bool = True
+    message: Optional[str] = None
+
+class BackgroundTasksResponse(BaseModel):
+    data: List[BackgroundTask]
+    success: bool = True
+    message: Optional[str] = None
+
 # Source Models
 class SourceBase(BaseModel):
     name: str
     description: Optional[str] = None
     userId: str
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
 
 class SourceCreate(SourceBase):
     pass

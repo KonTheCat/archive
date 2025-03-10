@@ -1,5 +1,11 @@
 import axios from "axios";
-import { ApiResponse, Source, Page, ChatMessage } from "../types/index";
+import {
+  ApiResponse,
+  Source,
+  Page,
+  ChatMessage,
+  BackgroundTask,
+} from "../types/index";
 
 // Create axios instance with base URL and default headers
 const api = axios.create({
@@ -93,16 +99,31 @@ export const pagesApi = {
     sourceId: string,
     files: FormData
   ): Promise<ApiResponse<Page[]>> => {
-    const response = await api.post<ApiResponse<Page[]>>(
-      `/sources/${sourceId}/pages/upload`,
-      files,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+    try {
+      // Log what we're sending for debugging
+      console.log(
+        `Uploading ${files.getAll("files").length} files to source ${sourceId}`
+      );
+
+      const response = await api.post<ApiResponse<Page[]>>(
+        `/sources/${sourceId}/pages/upload`,
+        files,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error uploading multiple pages:", error);
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response headers:", error.response.headers);
       }
-    );
-    return response.data;
+      throw error;
+    }
   },
 
   // Update an existing page
@@ -136,11 +157,21 @@ export const searchApi = {
   search: async (
     query: string,
     limit: number = 10,
-    vector: boolean = false
+    vector: boolean = false,
+    sourceIds: string[] = []
   ): Promise<ApiResponse<{ sources: Source[]; pages: Page[] }>> => {
+    let url = `/search?q=${encodeURIComponent(
+      query
+    )}&limit=${limit}&vector=${vector}`;
+
+    // Add source_ids parameter if provided
+    if (sourceIds.length > 0) {
+      url += `&source_ids=${sourceIds.join(",")}`;
+    }
+
     const response = await api.get<
       ApiResponse<{ sources: Source[]; pages: Page[] }>
-    >(`/search?q=${encodeURIComponent(query)}&limit=${limit}&vector=${vector}`);
+    >(url);
     return response.data;
   },
 };
@@ -150,12 +181,62 @@ export const chatApi = {
   // Send a message to the chat API
   sendMessage: async (
     message: string,
-    vectorSearch: boolean = true
+    vectorSearch: boolean = true,
+    sourcesLimit: number = 5,
+    sourceIds: string[] = []
   ): Promise<ApiResponse<ChatMessage>> => {
     const response = await api.post<ApiResponse<ChatMessage>>("/chat", {
       message,
       vector_search: vectorSearch,
+      sources_limit: sourcesLimit,
+      source_ids: sourceIds.length > 0 ? sourceIds : undefined,
     });
+    return response.data;
+  },
+};
+
+// Tasks API
+export const tasksApi = {
+  // Get all tasks
+  getTasks: async (): Promise<ApiResponse<BackgroundTask[]>> => {
+    const response = await api.get<ApiResponse<BackgroundTask[]>>("/tasks");
+    return response.data;
+  },
+
+  // Get a single task by ID
+  getTask: async (id: string): Promise<ApiResponse<BackgroundTask>> => {
+    const response = await api.get<ApiResponse<BackgroundTask>>(`/tasks/${id}`);
+    return response.data;
+  },
+
+  // Cancel a task
+  cancelTask: async (id: string): Promise<ApiResponse<BackgroundTask>> => {
+    const response = await api.delete<ApiResponse<BackgroundTask>>(
+      `/tasks/${id}`
+    );
+    return response.data;
+  },
+
+  // Cancel multiple tasks
+  cancelTasks: async (
+    taskIds: string[]
+  ): Promise<ApiResponse<{ cancelled_count: number }>> => {
+    const response = await api.delete<ApiResponse<{ cancelled_count: number }>>(
+      "/tasks",
+      {
+        data: taskIds,
+      }
+    );
+    return response.data;
+  },
+
+  // Cancel all tasks
+  cancelAllTasks: async (): Promise<
+    ApiResponse<{ cancelled_count: number }>
+  > => {
+    const response = await api.delete<ApiResponse<{ cancelled_count: number }>>(
+      "/tasks"
+    );
     return response.data;
   },
 };

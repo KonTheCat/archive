@@ -34,7 +34,12 @@ const Sources: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
-  const [newSource, setNewSource] = useState({ name: "", description: "" });
+  const [newSource, setNewSource] = useState({
+    name: "",
+    description: "",
+    startDate: "",
+    endDate: "",
+  });
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -68,7 +73,12 @@ const Sources: React.FC = () => {
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setNewSource({ name: "", description: "" });
+    setNewSource({
+      name: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+    });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,6 +100,8 @@ const Sources: React.FC = () => {
       const response = await sourcesApi.createSource({
         name: newSource.name,
         description: newSource.description,
+        startDate: newSource.startDate || undefined,
+        endDate: newSource.endDate || undefined,
         userId: "current-user", // This would be replaced with actual user ID in a real app
       });
 
@@ -179,6 +191,8 @@ const Sources: React.FC = () => {
                 <TableRow>
                   <TableCell>Title</TableCell>
                   <TableCell>Description</TableCell>
+                  <TableCell>Start Date</TableCell>
+                  <TableCell>End Date</TableCell>
                   <TableCell>Created</TableCell>
                   <TableCell>Last Updated</TableCell>
                   <TableCell align="center">Actions</TableCell>
@@ -202,6 +216,32 @@ const Sources: React.FC = () => {
                           fontStyle="italic"
                         >
                           No description
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {source.startDate ? (
+                        new Date(source.startDate).toLocaleDateString()
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontStyle="italic"
+                        >
+                          Not specified
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {source.endDate ? (
+                        new Date(source.endDate).toLocaleDateString()
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontStyle="italic"
+                        >
+                          Not specified
                         </Typography>
                       )}
                     </TableCell>
@@ -263,6 +303,34 @@ const Sources: React.FC = () => {
             onChange={handleInputChange}
             multiline
             rows={3}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            name="startDate"
+            label="Start Date (Optional)"
+            type="date"
+            fullWidth
+            variant="outlined"
+            value={newSource.startDate}
+            onChange={handleInputChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            name="endDate"
+            label="End Date (Optional)"
+            type="date"
+            fullWidth
+            variant="outlined"
+            value={newSource.endDate}
+            onChange={handleInputChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
           />
         </DialogContent>
         <DialogActions>

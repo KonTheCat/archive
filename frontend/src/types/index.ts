@@ -5,6 +5,17 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+// Background Task Types
+export interface BackgroundTask {
+  id: string;
+  taskType: string;
+  status: "pending" | "in_progress" | "completed" | "failed" | "cancelled";
+  sourceId?: string;
+  pageId?: string;
+  scheduledAt: string;
+  canCancel: boolean;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
@@ -33,6 +44,7 @@ export interface ChatMessage {
 export interface ChatRequest {
   message: string;
   vector_search?: boolean;
+  sources_limit?: number;
 }
 
 // Source Types
@@ -41,6 +53,8 @@ export interface Source {
   name: string;
   description?: string;
   userId: string;
+  startDate?: string;
+  endDate?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +63,8 @@ export interface SourceCreate {
   name: string;
   description?: string;
   userId: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 // Page Types

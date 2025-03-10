@@ -22,6 +22,7 @@ import {
   Collections as CollectionsIcon,
   Search as SearchIcon,
   Chat as ChatIcon,
+  Task as TaskIcon,
 } from "@mui/icons-material";
 import { Link, useLocation } from "react-router-dom";
 
@@ -46,6 +47,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: "Sources", icon: <CollectionsIcon />, path: "/sources" },
     { text: "Search", icon: <SearchIcon />, path: "/search" },
     { text: "Chat", icon: <ChatIcon />, path: "/chat" },
+    { text: "Tasks", icon: <TaskIcon />, path: "/tasks" },
   ];
 
   const drawer = (

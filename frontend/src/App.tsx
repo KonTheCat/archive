@@ -13,6 +13,7 @@ import SourceDetail from "./pages/SourceDetail";
 import PageDetail from "./pages/PageDetail";
 import Search from "./pages/Search";
 import Chat from "./pages/Chat";
+import Tasks from "./pages/Tasks";
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
             />
             <Route path="/search" element={<Search />} />
             <Route path="/chat" element={<Chat />} />
+            <Route path="/tasks" element={<Tasks />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>

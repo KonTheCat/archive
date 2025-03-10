@@ -346,9 +346,19 @@ async def upload_multiple_pages(
     files: List[UploadFile] = File(...),
     background_tasks: BackgroundTasks = BackgroundTasks()
 ):
-    """Upload multiple pages at once."""
+    """
+    Upload multiple pages at once.
+    
+    The frontend sends files with the field name 'files'.
+    Each file will be processed and stored as a separate page.
+    """
     try:
         logger.info(f"Uploading multiple pages for source ID: {source_id}")
+        logger.info(f"Received {len(files)} files")
+        
+        # Log file details for debugging
+        for i, file in enumerate(files):
+            logger.info(f"File {i+1}: filename={file.filename}, content_type={file.content_type}, size={file.size if hasattr(file, 'size') else 'unknown'}")
         cosmos_client = get_cosmos_db_client()
         blob_client = get_blob_storage_client()
         

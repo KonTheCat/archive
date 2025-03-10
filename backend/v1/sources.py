@@ -27,6 +27,8 @@ async def get_sources():
                 name=source["name"],
                 description=source.get("description"),
                 userId=source["userId"],
+                startDate=source.get("startDate"),
+                endDate=source.get("endDate"),
                 createdAt=source["createdAt"],
                 updatedAt=source["updatedAt"]
             )
@@ -57,6 +59,8 @@ async def get_source(source_id: str):
             name=source["name"],
             description=source.get("description"),
             userId=source["userId"],
+            startDate=source.get("startDate"),
+            endDate=source.get("endDate"),
             createdAt=source["createdAt"],
             updatedAt=source["updatedAt"]
         )
@@ -85,6 +89,8 @@ async def create_source(source: SourceCreate):
             "name": source.name,
             "description": source.description,
             "userId": source.userId,
+            "startDate": source.startDate,
+            "endDate": source.endDate,
             "createdAt": now,
             "updatedAt": now
         }
@@ -98,6 +104,8 @@ async def create_source(source: SourceCreate):
             name=created_source["name"],
             description=created_source.get("description"),
             userId=created_source["userId"],
+            startDate=created_source.get("startDate"),
+            endDate=created_source.get("endDate"),
             createdAt=created_source["createdAt"],
             updatedAt=created_source["updatedAt"]
         )
@@ -106,3 +114,53 @@ async def create_source(source: SourceCreate):
     except Exception as e:
         logger.error(f"Error creating source: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error creating source: {str(e)}")
+
+@router.put("/sources/{source_id}", response_model=SourceResponse)
+async def update_source(source_id: str, source_update: dict):
+    """Update an existing source."""
+    try:
+        logger.info(f"Updating source with ID: {source_id}")
+        cosmos_client = get_cosmos_db_client()
+        
+        # Get the current source
+        existing_source = await cosmos_client.get_source(source_id)
+        if not existing_source:
+            raise HTTPException(status_code=404, detail=f"Source with ID {source_id} not found")
+        
+        # Update the source with the new values
+        now = datetime.now().isoformat()
+        updates = {
+            "updatedAt": now
+        }
+        
+        # Only update fields that are provided
+        if "name" in source_update:
+            updates["name"] = source_update["name"]
+        if "description" in source_update:
+            updates["description"] = source_update["description"]
+        if "startDate" in source_update:
+            updates["startDate"] = source_update["startDate"]
+        if "endDate" in source_update:
+            updates["endDate"] = source_update["endDate"]
+        
+        # Update the source in the database
+        updated_source = await cosmos_client.update_source(source_id, updates)
+        
+        # Convert to Source model
+        source_model = Source(
+            id=updated_source["id"],
+            name=updated_source["name"],
+            description=updated_source.get("description"),
+            userId=updated_source["userId"],
+            startDate=updated_source.get("startDate"),
+            endDate=updated_source.get("endDate"),
+            createdAt=updated_source["createdAt"],
+            updatedAt=updated_source["updatedAt"]
+        )
+        
+        return SourceResponse(data=source_model)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating source: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error updating source: {str(e)}")

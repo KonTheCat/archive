@@ -17,6 +17,10 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  FormControl,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
 } from "@mui/material";
 import {
   Send as SendIcon,
@@ -27,6 +31,7 @@ import {
 } from "@mui/icons-material";
 import { chatApi } from "../services/api";
 import { Citation } from "../types";
+import SourceSelector from "../components/SourceSelector";
 
 // Citation list component
 const CitationList: React.FC<{ citations: Citation[] }> = ({ citations }) => {
@@ -98,7 +103,13 @@ const Chat: React.FC = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [openClearDialog, setOpenClearDialog] = useState(false);
+  const [sourcesLimit, setSourcesLimit] = useState<number>(5);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleSourcesLimitChange = (event: SelectChangeEvent<number>) => {
+    setSourcesLimit(Number(event.target.value));
+  };
 
   // Scroll to bottom of messages when messages change
   useEffect(() => {
@@ -150,7 +161,12 @@ const Chat: React.FC = () => {
 
     try {
       // Call the chat API - always use RAG (vector search)
-      const response = await chatApi.sendMessage(input, true);
+      const response = await chatApi.sendMessage(
+        input,
+        true,
+        sourcesLimit,
+        selectedSourceIds
+      );
 
       // Add assistant response to the UI
       const assistantMessage = {
@@ -209,9 +225,40 @@ const Chat: React.FC = () => {
           </IconButton>
         </Box>
 
-        <Typography variant="body1" color="text.secondary" paragraph>
-          Ask questions about your personal archive using natural language.
-        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 2,
+          }}
+        >
+          <Typography variant="body1" color="text.secondary">
+            Ask questions about your personal archive using natural language.
+          </Typography>
+
+          <Box sx={{ display: "flex", alignItems: "center", width: "250px" }}>
+            <Typography variant="body2" sx={{ mr: 2, minWidth: "120px" }}>
+              Sources Limit:
+            </Typography>
+            <FormControl variant="outlined" size="small" fullWidth>
+              <Select value={sourcesLimit} onChange={handleSourcesLimitChange}>
+                <MenuItem value={3}>3</MenuItem>
+                <MenuItem value={5}>5</MenuItem>
+                <MenuItem value={10}>10</MenuItem>
+                <MenuItem value={15}>15</MenuItem>
+                <MenuItem value={20}>20</MenuItem>
+                <MenuItem value={50}>50</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </Box>
+
+        {/* Source Selector */}
+        <SourceSelector
+          selectedSourceIds={selectedSourceIds}
+          onSourceSelectionChange={setSelectedSourceIds}
+        />
 
         <Paper
           sx={{

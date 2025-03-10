@@ -12,6 +12,7 @@ from backend.utils.blob_storage import get_blob_storage_client
 from backend.utils.cosmos_db import get_cosmos_db_client
 from backend.utils.logger import get_logger
 from backend.utils.vector_embeddings import get_vector_embeddings_helper
+from backend.v1.tasks import register_task, update_task_status
 
 # Set up logger
 logger = get_logger(__name__)
@@ -72,7 +73,7 @@ async def download_blob_to_temp_file(blob_url):
         logger.error(f"Error downloading blob: {str(e)}", exc_info=True)
         raise
 
-async def extract_text_from_blob(blob_url, source_id, page_id):
+async def extract_text_from_blob(blob_url, source_id, page_id, task_id=None):
     """
     Extract text from a blob and update the page document in Cosmos DB.
     This function is intended to be run as a background task.
@@ -81,9 +82,14 @@ async def extract_text_from_blob(blob_url, source_id, page_id):
         blob_url (str): URL of the blob to extract text from.
         source_id (str): ID of the source.
         page_id (str): ID of the page.
+        task_id (str, optional): ID of the task tracking this operation.
     """
     start_time = datetime.datetime.now()
     extraction_logger.info(f"Starting text extraction for page {page_id} in source {source_id}")
+    
+    # Update task status to in_progress if task_id is provided
+    if task_id:
+        update_task_status(task_id, "in_progress")
     
     try:
         # Get the document intelligence helper
@@ -152,6 +158,14 @@ async def extract_text_from_blob(blob_url, source_id, page_id):
             f"Error extracting text for page {page_id} in source {source_id}: {str(e)}",
             exc_info=True
         )
+        
+        # Update task status to failed if task_id is provided
+        if task_id:
+            update_task_status(task_id, "failed")
+    else:
+        # Update task status to completed if task_id is provided and no exception occurred
+        if task_id:
+            update_task_status(task_id, "completed")
 
 def schedule_text_extraction(background_tasks, blob_url, source_id, page_id):
     """
@@ -164,4 +178,16 @@ def schedule_text_extraction(background_tasks, blob_url, source_id, page_id):
         page_id (str): ID of the page.
     """
     logger.info(f"Scheduling text extraction for page {page_id} in source {source_id}")
-    background_tasks.add_task(extract_text_from_blob, blob_url, source_id, page_id)
+    
+    # Register the task in the task tracking system
+    task = register_task(
+        task_type="text_extraction",
+        source_id=source_id,
+        page_id=page_id,
+        can_cancel=True
+    )
+    
+    # Schedule the background task with the task ID
+    background_tasks.add_task(extract_text_from_blob, blob_url, source_id, page_id, task.id)
+    
+    logger.info(f"Registered task {task.id} for text extraction of page {page_id}")
