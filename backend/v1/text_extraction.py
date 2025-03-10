@@ -7,9 +7,9 @@ import asyncio
 from fastapi import BackgroundTasks
 from azure.storage.blob import BlobServiceClient
 
-from helping_the_ai.document_intelligence import get_document_intelligence_helper
-from helping_the_ai.blob_storage import get_blob_storage_client
-from helping_the_ai.cosmos_db import get_cosmos_db_client
+from backend.utils.document_intelligence import get_document_intelligence_helper
+from backend.utils.blob_storage import get_blob_storage_client
+from backend.utils.cosmos_db import get_cosmos_db_client
 from backend.utils.logger import get_logger
 from backend.utils.vector_embeddings import get_vector_embeddings_helper
 
@@ -95,6 +95,14 @@ async def extract_text_from_blob(blob_url, source_id, page_id):
         # Get the vector embeddings helper
         vector_embeddings = get_vector_embeddings_helper()
         
+        # Check if the page still exists before proceeding
+        page = await cosmos_client.get_page(source_id, page_id)
+        if not page:
+            extraction_logger.warning(
+                f"Page {page_id} in source {source_id} not found. Skipping text extraction."
+            )
+            return
+        
         # Download the blob to a temporary file
         temp_file_path = await download_blob_to_temp_file(blob_url)
         
@@ -106,6 +114,14 @@ async def extract_text_from_blob(blob_url, source_id, page_id):
             extraction_logger.info(f"Generating vector embeddings for page {page_id}")
             content_vector = await vector_embeddings.get_embeddings(extracted_text)
             
+            # Check again if the page still exists before updating
+            page = await cosmos_client.get_page(source_id, page_id)
+            if not page:
+                extraction_logger.warning(
+                    f"Page {page_id} in source {source_id} was deleted during text extraction. Skipping update."
+                )
+                return
+            
             # Update the page document in Cosmos DB
             update_data = {
                 "extractedText": extracted_text,
@@ -113,7 +129,7 @@ async def extract_text_from_blob(blob_url, source_id, page_id):
                 "updatedAt": datetime.datetime.now().isoformat()
             }
             
-            await cosmos_client.update_space_document(source_id, page_id, update_data)
+            await cosmos_client.update_page(source_id, page_id, update_data)
             
             end_time = datetime.datetime.now()
             duration = (end_time - start_time).total_seconds()

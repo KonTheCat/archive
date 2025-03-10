@@ -1,6 +1,6 @@
 import logging
 from typing import List, Dict, Any, Optional
-from helping_the_ai.cosmos_db import get_cosmos_db_client
+from backend.utils.cosmos_db import get_cosmos_db_client
 from backend.utils.logger import get_logger
 
 # Set up logger
@@ -31,9 +31,9 @@ class CosmosDBExtensions:
         self._initialized = True
         logger.info("CosmosDBExtensions initialized successfully")
     
-    async def query_spaces(self, query: str, parameters: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    async def query_sources(self, query: str, parameters: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
         """
-        Execute a custom query on the spaces container.
+        Execute a custom query on the sources container.
         
         Args:
             query (str): The query to execute.
@@ -43,10 +43,10 @@ class CosmosDBExtensions:
             List[Dict[str, Any]]: The query results.
         """
         try:
-            logger.info(f"Executing query on spaces container: {query}")
+            logger.info(f"Executing query on sources container: {query}")
             
             # Get the container client
-            container = self.cosmos_client.spaces_container
+            container = self.cosmos_client.sources_container
             
             # Execute the query
             if parameters:
@@ -65,12 +65,12 @@ class CosmosDBExtensions:
             return items
         
         except Exception as e:
-            logger.error(f"Error executing query on spaces container: {str(e)}", exc_info=True)
+            logger.error(f"Error executing query on sources container: {str(e)}", exc_info=True)
             raise
     
-    async def query_space_documents(self, query: str, parameters: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    async def query_pages(self, query: str, parameters: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
         """
-        Execute a custom query on the space_documents container.
+        Execute a custom query on the pages container.
         
         Args:
             query (str): The query to execute.
@@ -80,10 +80,10 @@ class CosmosDBExtensions:
             List[Dict[str, Any]]: The query results.
         """
         try:
-            logger.info(f"Executing query on space_documents container: {query}")
+            logger.info(f"Executing query on pages container: {query}")
             
             # Get the container client
-            container = self.cosmos_client.space_documents_container
+            container = self.cosmos_client.pages_container
             
             # Execute the query
             if parameters:
@@ -102,7 +102,7 @@ class CosmosDBExtensions:
             return items
         
         except Exception as e:
-            logger.error(f"Error executing query on space_documents container: {str(e)}", exc_info=True)
+            logger.error(f"Error executing query on pages container: {str(e)}", exc_info=True)
             raise
 
 # Create a singleton instance

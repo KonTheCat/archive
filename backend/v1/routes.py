@@ -1,9 +1,11 @@
 from fastapi import APIRouter
 
-from backend.v1.demo_background_task import router as demo_background_router
-from backend.v1.archive import router as archive_router
+from backend.v1.sources import router as sources_router
+from backend.v1.pages import router as pages_router
+from backend.v1.search import router as search_router
 
 router = APIRouter()
 
-router.include_router(demo_background_router, prefix="")
-router.include_router(archive_router, prefix="")
+router.include_router(sources_router, prefix="")
+router.include_router(pages_router, prefix="")
+router.include_router(search_router, prefix="")

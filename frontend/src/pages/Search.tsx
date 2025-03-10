@@ -104,10 +104,69 @@ const Search: React.FC = () => {
     if (!searchQuery.trim()) return text;
 
     const regex = new RegExp(`(${searchQuery})`, "gi");
-    return text.replace(
-      regex,
-      '<span style="background-color: rgba(144, 202, 249, 0.5); font-weight: bold;">$1</span>'
-    );
+
+    // If no match is found, return a portion of the text
+    if (!regex.test(text)) {
+      // Return first 100 characters or the whole text if shorter
+      return text.length > 100 ? text.substring(0, 100) + "..." : text;
+    }
+
+    // Reset regex since we used it in the test above
+    regex.lastIndex = 0;
+
+    let result = "";
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      const matchIndex = match.index;
+
+      // Find the start of the context (approximately 10 words before)
+      let contextStart = matchIndex;
+      let wordCount = 0;
+      while (contextStart > 0 && wordCount < 10) {
+        contextStart--;
+        if (text[contextStart] === " " || text[contextStart] === "\n") {
+          wordCount++;
+        }
+      }
+
+      // Find the end of the context (approximately 10 words after)
+      let contextEnd = matchIndex + match[0].length;
+      wordCount = 0;
+      while (contextEnd < text.length && wordCount < 10) {
+        if (text[contextEnd] === " " || text[contextEnd] === "\n") {
+          wordCount++;
+        }
+        contextEnd++;
+      }
+
+      // Extract the context
+      const beforeMatch = text.substring(contextStart, matchIndex);
+      const afterMatch = text.substring(
+        matchIndex + match[0].length,
+        contextEnd
+      );
+
+      // Add ellipsis if this isn't the start or end of the text
+      const prefix = contextStart > 0 ? "..." : "";
+      const suffix = contextEnd < text.length ? "..." : "";
+
+      // Add this context to the result
+      result += `${prefix}${beforeMatch}<span style="background-color: rgba(144, 202, 249, 0.5); font-weight: bold;">${match[0]}</span>${afterMatch}${suffix}<br/><br/>`;
+
+      // Move past this match to avoid infinite loop with zero-width matches
+      if (match.index === regex.lastIndex) {
+        regex.lastIndex++;
+      }
+
+      // Limit to 3 matches to avoid overwhelming the UI
+      if (result.split("<br/><br/>").length > 3) {
+        result += "...";
+        break;
+      }
+    }
+
+    return result || text;
   };
 
   // Calculate relevance percentage from similarity score
@@ -230,7 +289,8 @@ const Search: React.FC = () => {
                       <Table>
                         <TableHead>
                           <TableRow>
-                            <TableCell>Image</TableCell>
+                            <TableCell>Source</TableCell>
+                            <TableCell>Title</TableCell>
                             <TableCell>Date</TableCell>
                             {useVectorSearch && (
                               <TableCell align="center">Relevance</TableCell>
@@ -240,87 +300,93 @@ const Search: React.FC = () => {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {searchResults.pages.map((page) => (
-                            <TableRow key={page.id}>
-                              <TableCell sx={{ width: 100 }}>
-                                {page.imageUrl && (
-                                  <Box
-                                    sx={{
-                                      width: 80,
-                                      height: 80,
-                                      backgroundImage: `url(${page.imageUrl})`,
-                                      backgroundSize: "cover",
-                                      backgroundPosition: "center",
-                                      borderRadius: 1,
-                                    }}
-                                  />
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {page.date
-                                  ? new Date(page.date).toLocaleDateString()
-                                  : "No date"}
-                              </TableCell>
-                              {useVectorSearch && (
-                                <TableCell align="center" sx={{ width: 120 }}>
-                                  {page.similarity !== undefined ? (
-                                    <Box sx={{ width: 100, mx: "auto" }}>
-                                      <Typography
-                                        variant="body2"
-                                        color="primary"
-                                        fontWeight="bold"
-                                        align="center"
-                                      >
-                                        {calculateRelevancePercentage(
-                                          page.similarity
-                                        )}
-                                        %
-                                      </Typography>
-                                      <LinearProgress
-                                        variant="determinate"
-                                        value={calculateRelevancePercentage(
-                                          page.similarity
-                                        )}
-                                        color="primary"
-                                        sx={{ height: 6, borderRadius: 3 }}
-                                      />
-                                    </Box>
+                          {searchResults.pages.map((page) => {
+                            // Find the source for this page
+                            const source = searchResults.sources.find(
+                              (s) => s.id === page.sourceId
+                            );
+
+                            return (
+                              <TableRow key={page.id}>
+                                <TableCell>
+                                  {source ? (
+                                    <Link to={`/sources/${source.id}`}>
+                                      {source.name}
+                                    </Link>
                                   ) : (
-                                    "N/A"
+                                    "Unknown Source"
                                   )}
                                 </TableCell>
-                              )}
-                              <TableCell>
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                  sx={{
-                                    maxHeight: "80px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 3,
-                                    WebkitBoxOrient: "vertical",
-                                  }}
-                                  dangerouslySetInnerHTML={{
-                                    __html: highlightSearchTerms(
-                                      page.extractedText || "No text extracted"
-                                    ),
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell align="center">
-                                <Button
-                                  component={Link}
-                                  to={`/sources/${page.sourceId}/pages/${page.id}`}
-                                  size="small"
-                                  color="primary"
-                                >
-                                  View Details
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                                <TableCell>
+                                  {page.title || "Untitled"}
+                                </TableCell>
+                                <TableCell>
+                                  {page.date
+                                    ? new Date(page.date).toLocaleDateString()
+                                    : "No date"}
+                                </TableCell>
+                                {useVectorSearch && (
+                                  <TableCell align="center" sx={{ width: 120 }}>
+                                    {page.similarity !== undefined ? (
+                                      <Box sx={{ width: 100, mx: "auto" }}>
+                                        <Typography
+                                          variant="body2"
+                                          color="primary"
+                                          fontWeight="bold"
+                                          align="center"
+                                        >
+                                          {calculateRelevancePercentage(
+                                            page.similarity
+                                          )}
+                                          %
+                                        </Typography>
+                                        <LinearProgress
+                                          variant="determinate"
+                                          value={calculateRelevancePercentage(
+                                            page.similarity
+                                          )}
+                                          color="primary"
+                                          sx={{ height: 6, borderRadius: 3 }}
+                                        />
+                                      </Box>
+                                    ) : (
+                                      "N/A"
+                                    )}
+                                  </TableCell>
+                                )}
+                                <TableCell>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{
+                                      maxHeight: "80px",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 3,
+                                      WebkitBoxOrient: "vertical",
+                                    }}
+                                    dangerouslySetInnerHTML={{
+                                      __html: highlightSearchTerms(
+                                        page.extractedText ||
+                                          "No text extracted"
+                                      ),
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Button
+                                    component={Link}
+                                    to={`/sources/${page.sourceId}/pages/${page.id}`}
+                                    size="small"
+                                    color="primary"
+                                  >
+                                    View Details
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </Box>

@@ -238,7 +238,15 @@ const SourceDetail: React.FC = () => {
       const response = await pagesApi.createPage(id, formData);
 
       if (response.success) {
-        setPages((prev) => [...prev, response.data]);
+        // Refresh the pages list to ensure we have the latest data
+        const pagesResponse = await pagesApi.getPages(id);
+        if (pagesResponse.success) {
+          setPages(pagesResponse.data);
+        } else {
+          // Fallback to adding the new page to the existing list
+          setPages((prev) => [...prev, response.data]);
+        }
+
         setSnackbar({
           open: true,
           message: "Page uploaded successfully",
@@ -285,7 +293,15 @@ const SourceDetail: React.FC = () => {
       const response = await pagesApi.uploadPages(id, formData);
 
       if (response.success) {
-        setPages((prev) => [...prev, ...response.data]);
+        // Refresh the pages list to ensure we have the latest data
+        const pagesResponse = await pagesApi.getPages(id);
+        if (pagesResponse.success) {
+          setPages(pagesResponse.data);
+        } else {
+          // Fallback to adding the new pages to the existing list
+          setPages((prev) => [...prev, ...response.data]);
+        }
+
         setSnackbar({
           open: true,
           message: `${response.data.length} pages uploaded successfully`,

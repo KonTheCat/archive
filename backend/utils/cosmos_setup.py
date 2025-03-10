@@ -58,7 +58,7 @@ pages_indexing_policy = {
     "compositeIndexes": [
         [
             {
-                "path": "/spaceId",
+                "path": "/sourceId",
                 "order": "ascending"
             },
             {
@@ -233,7 +233,7 @@ def setup_cosmos_containers():
         ensure_container_exists(
             management_client,
             PAGES_CONTAINER_NAME,
-            "/spaceId",
+            "/sourceId",
             pages_indexing_policy,
             pages_full_text_policy,
             pages_vector_embedding_policy
